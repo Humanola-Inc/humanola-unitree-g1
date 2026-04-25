@@ -1,0 +1,12 @@
+[robot]
+name = "unitree"
+internal_name = "unitree_g1"
+uuid = "019bf5f8-1e21-7c63-99c7-bf1bc3ebd13a"
+public = true
+urdf_dir = "URDF"
+
+[docker]
+build_args = []
+dockerfile = "dockerfile"
+context = "."
+image_name = "jowillianto/humanola-unitree-server"
