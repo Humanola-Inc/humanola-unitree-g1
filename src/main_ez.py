@@ -1,8 +1,8 @@
 import sys
 from dataclasses import dataclass
+from typing import Dict
 
 from humanola import robo
-from typing_extensions import Dict
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 from battery import G1Battery
@@ -23,14 +23,13 @@ from sources import JointSource
 class CameraSpec:
     id: int
     desc: robo.CameraDesc
-    cam: robo.CameraSpec
+    cam: "robo.CameraSpec"
 
 
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
 
     # detect cameras
-    picked_camera = None
     cameras = robo.list_cameras()
     cam_ids: Dict[int, CameraSpec] = {}
 
