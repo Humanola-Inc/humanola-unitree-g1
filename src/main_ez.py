@@ -1,6 +1,8 @@
 import sys
+from dataclasses import dataclass
 
 from humanola import robo
+from typing_extensions import Dict
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 from battery import G1Battery
@@ -16,16 +18,33 @@ from controllers import (
 )
 from sources import JointSource
 
+
+@dataclass
+class CameraSpec:
+    id: int
+    desc: robo.CameraDesc
+    cam: robo.CameraSpec
+
+
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
 
     # detect cameras
     picked_camera = None
     cameras = robo.list_cameras()
+    cam_ids: Dict[int, CameraSpec] = {}
+
     for id, camera in cameras:
         desc = camera.desc()
-        if desc.width == 1920 and desc.height == 1080 and desc.frame_rate == 30:
-            picked_camera = camera
+        if id not in cam_ids:
+            cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
+        elif (
+            id in cam_ids
+            and desc.width > cam_ids[id].desc.width
+            and desc.height > cam_ids[id].desc.height
+            and desc.frame_rate > cam_ids[id].desc.frame_rate
+        ):
+            cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
 
     unitree_g1 = (
         robo.Robo.new_default()
@@ -51,7 +70,8 @@ if __name__ == "__main__":
         .add_controller("controller", LocoController(config=LocoConfig.dpad()))
         .set_battery(G1Battery())
     )
-    if picked_camera is not None:
-        unitree_g1 = unitree_g1.add_camera("unitree-camera", picked_camera)
+
+    for id, spec in cam_ids.items():
+        unitree_g1 = unitree_g1.add_camera(spec.desc.name, spec.cam)
     channel, runtime = unitree_g1.run(on_error=lambda x: print(str(x), file=sys.stderr))
     runtime.wait_for_interrupt()

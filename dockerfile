@@ -66,8 +66,8 @@ COPY --from=compile /opt/unitree_sdk2_python/unitree_sdk2py/utils/lib /usr/local
 COPY --from=compile /opt/unitree_sdk2_python/unitree_sdk2py/g1 /usr/local/lib/python3.11/site-packages/unitree_sdk2py/g1
 
 WORKDIR /app
-COPY src/. .
-COPY URDF /app/URDF
+COPY ./src/. .
+COPY ./URDF /app/URDF
 
 ENV PYTHONPATH="/app"
 ENV LD_LIBRARY_PATH="/usr/local/lib"

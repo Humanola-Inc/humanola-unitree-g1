@@ -1,4 +1,4 @@
 {
   "name": "mamba",
-  "build": { "dockerfile": "../dev.dockerfile" },
+  "build": { "dockerfile": "../dev.dockerfile", "context": "../" },
 }
