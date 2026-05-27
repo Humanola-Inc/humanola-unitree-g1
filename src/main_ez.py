@@ -26,6 +26,20 @@ class CameraSpec:
     cam: "robo.CameraSpec"
 
 
+def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
+    if cur.width > prev.width:
+        return True
+    elif cur.width == prev.width and cur.height > prev.height:
+        return True
+    elif (
+        cur.width == prev.width
+        and cur.height == prev.height
+        and cur.frame_rate > prev.frame_rate
+    ):
+        return True
+    return False
+
+
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
 
@@ -37,12 +51,7 @@ if __name__ == "__main__":
         desc = camera.desc()
         if id not in cam_ids:
             cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
-        elif (
-            id in cam_ids
-            and desc.width > cam_ids[id].desc.width
-            and desc.height > cam_ids[id].desc.height
-            and desc.frame_rate > cam_ids[id].desc.frame_rate
-        ):
+        elif id in cam_ids and is_better(cam_ids[id].desc, desc):
             cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
 
     unitree_g1 = (
