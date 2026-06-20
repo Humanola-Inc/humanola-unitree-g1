@@ -92,12 +92,5 @@ class XrFull:
             if id not in self.other_skip_ids:
                 c.ctrl_end()
 
-    def desc(self):
-        return robo.LoopDesc(
-            name="XR Teloperation",
-            desc="Full XR Teleoperation, Hands and Foot",
-            frame_rate=60,
-        )
-
     def open(self):
         return self

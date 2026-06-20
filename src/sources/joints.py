@@ -1,9 +1,10 @@
 import math
 from typing import Sequence
 
-from g1_native import G1Subscriber
-from humanola import data, robo, streaming
+from humanola import data, transport
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_, MotorState_
+
+from g1_native import G1Subscriber
 
 RAD_TO_MDEG = 180_000 / math.pi
 
@@ -18,7 +19,7 @@ class JointSource:
     def src(self):
         msg = self.sub.get_msg_nowait()
         if msg is None:
-            return streaming.DataFrame.binary(data.Frame().proto_encode())
+            return transport.RawPacket(data.Frame().proto_encode())
         frame = data.Frame()
         motor_states: Sequence[MotorState_] = msg.motor_state  # type: ignore
         # Left leg
@@ -141,17 +142,10 @@ class JointSource:
             "right_wrist_yaw_joint",
             data.Entry.rot(int(motor_states[28].q * RAD_TO_MDEG)),
         )
-        return streaming.DataFrame.binary(frame.proto_encode())
+        return transport.RawPacket(frame.proto_encode())
 
     def src_end(self):
         self.sub.stop()
-
-    def desc(self):
-        return robo.LoopDesc(
-            name="Unitree G1 Joint Data",
-            desc="The joint data for unitree G1",
-            frame_rate=60,
-        )
 
     def open(self):
         return JointSource()

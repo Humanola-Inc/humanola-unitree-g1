@@ -31,11 +31,7 @@ def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
         return True
     elif cur.width == prev.width and cur.height > prev.height:
         return True
-    elif (
-        cur.width == prev.width
-        and cur.height == prev.height
-        and cur.frame_rate > prev.frame_rate
-    ):
+    elif cur.width == prev.width and cur.height == prev.height and cur.rate > prev.rate:
         return True
     return False
 
@@ -56,9 +52,22 @@ if __name__ == "__main__":
 
     unitree_g1 = (
         robo.Robo.new_default()
-        .add_source("data", JointSource())
-        .add_controller(
-            "controller",
+        .attach_source(
+            robo.LoopDesc(
+                name="Unitree G1 Joint Data",
+                desc="The joint data for unitree G1",
+                rate=60,
+                topic="src:data",
+            ),
+            JointSource(),
+        )
+        .attach_controller(
+            robo.LoopDesc(
+                name="XR Teloperation",
+                desc="Full XR Teleoperation, Hands and Foot",
+                rate=60,
+                topic="dev:controller",
+            ),
             XrFull(
                 config=XrFullConfig(
                     loco=LocoConfig.xr_with_hands(),
@@ -75,8 +84,16 @@ if __name__ == "__main__":
                 )
             ),
         )
-        .add_controller("controller", LocoController(config=LocoConfig.dpad()))
-        .set_battery(G1Battery())
+        .attach_controller(
+            robo.LoopDesc(
+                name="PS4 Control",
+                desc="Control the G1 unit with a ps4 stick",
+                rate=60,
+                topic="dev:controller",
+            ),
+            LocoController(config=LocoConfig.dpad()),
+        )
+        .attach_battery(G1Battery())
     )
 
     for id, spec in cam_ids.items():

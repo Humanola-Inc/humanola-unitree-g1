@@ -138,12 +138,5 @@ class LocoController:
         assert self.loco is not None
         self.loco = None
 
-    def desc(self) -> robo.LoopDesc:
-        return robo.LoopDesc(
-            name="PS4 Control",
-            desc="Control the G1 unit with a ps4 stick",
-            frame_rate=60,
-        )
-
     def open(self):
         return self
