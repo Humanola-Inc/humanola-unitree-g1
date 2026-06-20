@@ -18,37 +18,8 @@ from controllers import (
 )
 from sources import JointSource
 
-
-@dataclass
-class CameraSpec:
-    id: int
-    desc: robo.CameraDesc
-    cam: "robo.CameraSpec"
-
-
-def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
-    if cur.width > prev.width:
-        return True
-    elif cur.width == prev.width and cur.height > prev.height:
-        return True
-    elif cur.width == prev.width and cur.height == prev.height and cur.rate > prev.rate:
-        return True
-    return False
-
-
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
-
-    # detect cameras
-    cameras = robo.list_cameras()
-    cam_ids: Dict[int, CameraSpec] = {}
-
-    for id, camera in cameras:
-        desc = camera.desc()
-        if id not in cam_ids:
-            cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
-        elif id in cam_ids and is_better(cam_ids[id].desc, desc):
-            cam_ids[id] = CameraSpec(id=id, desc=desc, cam=camera)
 
     unitree_g1 = (
         robo.Robo.new_default()
@@ -93,10 +64,8 @@ if __name__ == "__main__":
             ),
             LocoController(config=LocoConfig.dpad()),
         )
+        .auto_discover_cameras()
         .attach_battery(G1Battery())
     )
-
-    for id, spec in cam_ids.items():
-        unitree_g1 = unitree_g1.add_camera(spec.desc.name, spec.cam)
     channel, runtime = unitree_g1.run(on_error=lambda x: print(str(x), file=sys.stderr))
     runtime.wait_for_interrupt()
