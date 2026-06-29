@@ -52,7 +52,7 @@ if __name__ == "__main__":
                 name="XR Teloperation",
                 desc="Full XR Teleoperation, Hands and Foot",
                 rate=60,
-                topic=constants.DEV_XR_CONTROLLER,
+                topic=constants.DEV_XR_CONTROLLER_TOPIC,
             ),
             XrFull(
                 config=XrFullConfig(
