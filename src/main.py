@@ -1,6 +1,6 @@
 import sys
 
-from humanola import robo
+from humanola import constants, robo
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 from battery import G1Battery
@@ -34,10 +34,25 @@ if __name__ == "__main__":
         )
         .attach_controller(
             robo.LoopDesc(
+                name="Inspire Hands",
+                desc="Inspire hands control",
+                rate=60,
+                topic=constants.DEV_XR_HAND_TOPIC,
+            ),
+            InspireHandGenericController(
+                config=InspireHandGenericConfig(
+                    ip="192.168.123.211",
+                    buttons=["xr.right.aim", "dpad.r2"],
+                    hand="right",
+                )
+            ),
+        )
+        .attach_controller(
+            robo.LoopDesc(
                 name="XR Teloperation",
                 desc="Full XR Teleoperation, Hands and Foot",
                 rate=60,
-                topic="dev:controller",
+                topic=constants.DEV_XR_CONTROLLER,
             ),
             XrFull(
                 config=XrFullConfig(
@@ -60,13 +75,12 @@ if __name__ == "__main__":
                 name="PS4 Control",
                 desc="Control the G1 unit with a ps4 stick",
                 rate=60,
-                topic="dev:controller",
+                topic=constants.DEV_GAMEPAD_TOPIC,
             ),
             LocoController(config=LocoConfig.dpad()),
         )
         .attach_battery(G1Battery())
         .auto_discover_cameras()
-        .attach_battery(G1Battery())
         .verbose()
         .run(on_error=lambda x: print(str(x), file=sys.stderr))
     )
