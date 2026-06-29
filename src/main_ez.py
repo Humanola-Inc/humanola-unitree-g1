@@ -1,6 +1,4 @@
-import sys
-from dataclasses import dataclass
-from typing import Dict
+import logging
 
 from humanola import constants, robo
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
@@ -17,6 +15,11 @@ from controllers import (
     XrFullConfig,
 )
 from sources import JointSource
+
+
+def on_error(err: str) -> None:
+    logging.error("Robo error: %s", err)
+
 
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
@@ -82,5 +85,5 @@ if __name__ == "__main__":
         .auto_discover_cameras()
         .attach_battery(G1Battery())
     )
-    channel, runtime = unitree_g1.run()
+    channel, runtime = unitree_g1.run(on_error)
     runtime.wait_for_interrupt()
