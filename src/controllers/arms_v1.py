@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import multiprocessing
 import pathlib
-import sys
 import time
 from dataclasses import dataclass
 from enum import IntEnum
@@ -439,8 +438,6 @@ def arm_control_loop(
         duration = (time.perf_counter_ns() - start_time) / 1e9
         if duration < ctrl_dt:
             time.sleep(ctrl_dt - duration)
-        else:
-            print(f"Control Loop Slows: {round(duration / 1e6, 8)}ms", file=sys.stderr)
     cmd.motor_cmd[G1_29_JointIndex.kNotUsedJoint0.value].mode = 1
     cmd.motor_cmd[G1_29_JointIndex.kNotUsedJoint0.value].q = 0
     pub.Write(cmd)
@@ -567,7 +564,7 @@ class ArmController:
 
 @dataclass
 class G1ArmConfig:
-    scale: float = 2.0
+    scale: float = 2
 
 
 class G1Arm:
@@ -690,7 +687,8 @@ class G1Arm:
                 pose2transform(prev_left_pos, prev_left_rot)
             )
             tf = convert_to_robot_convention(pose2transform(cur_left_pos, cur_left_rot))
-            left_rel_tf = np.linalg.inv(prev_tf) @ tf * self.config.scale
+            left_rel_tf = np.linalg.inv(prev_tf) @ tf
+            left_rel_tf[:3, 3] *= self.config.scale
             should_run = True
         if (
             prev_right_pos is not None
@@ -710,7 +708,8 @@ class G1Arm:
             tf = convert_to_robot_convention(
                 pose2transform(cur_right_pos, cur_right_rot)
             )
-            right_rel_tf = np.linalg.inv(prev_tf) @ tf * self.config.scale
+            right_rel_tf = np.linalg.inv(prev_tf) @ tf
+            right_rel_tf[:3, 3] *= self.config.scale
             should_run = True
         if should_run:
             self.controller.move_arms_rel(left_rel_tf, right_rel_tf)
