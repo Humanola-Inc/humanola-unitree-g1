@@ -82,5 +82,5 @@ if __name__ == "__main__":
         .auto_discover_cameras()
         .attach_battery(G1Battery())
     )
-    channel, runtime = unitree_g1.run(on_error=lambda x: print(str(x), file=sys.stderr))
+    channel, runtime = unitree_g1.run()
     runtime.wait_for_interrupt()

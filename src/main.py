@@ -82,6 +82,6 @@ if __name__ == "__main__":
         .attach_battery(G1Battery())
         .auto_discover_cameras()
         .verbose()
-        .run(on_error=lambda x: print(str(x), file=sys.stderr))
+        .run()
     )
     runtime.wait_for_interrupt()
