@@ -11,13 +11,14 @@ from typing import List, Literal, Tuple
 import casadi
 import numpy as np
 import pinocchio as pin
-from g1_native import G1Subscriber, convert_to_robot_convention, pose2transform
 from humanola import controllers, robo
 from pinocchio import casadi as cpin
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher
 from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowCmd_, LowState_
 from unitree_sdk2py.utils.crc import CRC
+
+from g1_native import G1Subscriber, convert_to_robot_convention, pose2transform
 
 
 class G1_29_JointIndex(IntEnum):
@@ -288,23 +289,47 @@ class ArmSolver:
                 "ipopt": {"print_level": 0, "max_iter": 100, "tol": 1e-7},
                 "print_time": False,
                 "calc_lam_p": False,
+                "expand": True,
+                "jit": True,
+                "compiler": "shell",
+                "jit_options": {
+                    "flags": ["-Ofast", "-march=native"],
+                    "compiler": "gcc",
+                },
+                "jit_cleanup": True,
             },
         )
+
+        # Bake the solve into one reusable, JIT-compiled function:
+        #   (q_init, tf_l, tf_r, prev_q) -> q_sol   (opti_var_q doubles as initial guess)
+        self.solve_fn = self.opti.to_function(
+            "ik",
+            [
+                self.opti_var_q,
+                self.opti_par_tf_l,
+                self.opti_par_tf_r,
+                self.opti_var_prev_q,
+            ],
+            [self.opti_var_q],
+            ["q_init", "tf_l", "tf_r", "prev_q"],
+            ["q_sol"],
+        )
+
         self.smooth_filter = WeightedMovingFilter([0.4, 0.3, 0.2, 0.1], 14)
+
+        # Warm-up: forces JIT compilation now, at construction, instead of on the
+        # first real inverse(). Call solve_fn directly so we don't push a bogus
+        # sample into smooth_filter.
+        left_tf, right_tf = self.forward(np.zeros(14))
+        self.solve_fn(np.zeros(14), left_tf, right_tf, np.zeros(14))
 
     def inverse(
         self, prev_joints: np.ndarray, left_ef: np.ndarray, right_ef: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:
-        # set params for previous value before we solve
-        self.opti.set_value(self.opti_var_prev_q, prev_joints)
-        self.opti.set_value(self.opti_par_tf_l, left_ef)
-        self.opti.set_value(self.opti_par_tf_r, right_ef)
-        self.opti.set_initial(self.opti_var_q, prev_joints)
+        # solve via the compiled function (q_init and prev_q are both prev_joints)
+        sol_q = self.solve_fn(prev_joints, left_ef, right_ef, prev_joints)
+        joints = np.array(sol_q).flatten()
 
-        # now we solve
-        self.opti.solve()
-        joints = self.opti.value(self.opti_var_q)
-        joints = np.array([joint for joint in joints])
         self.smooth_filter.add_data(joints)
         joints = self.smooth_filter.filtered_data
         # Solve for tauff

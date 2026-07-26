@@ -52,7 +52,8 @@ RUN apt update && apt install -y \
   libsm6 \
   libxext6 \
   libstdc++6 \
-  ca-certificates
+  ca-certificates \
+  build-essential
 RUN apt clean
 
 # COPY AND RUN
