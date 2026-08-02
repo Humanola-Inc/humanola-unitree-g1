@@ -1,5 +1,3 @@
-import logging
-
 from humanola import constants, robo
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
@@ -14,18 +12,13 @@ from controllers import (
     XrFull,
     XrFullConfig,
 )
-from sources import JointSource
-
-
-def on_error(err: str) -> None:
-    logging.error("Robo error: %s", err)
-
+from sources import JOINT_FIELDS, JointSource
 
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
     channel, runtime = (
         robo.Robo(
-            url="https://grpc.humanola.com",
+            api_url="https://grpc.humanola.com",
             api_key="<YOUR_API_KEY>",
         )
         .attach_source(
@@ -33,7 +26,8 @@ if __name__ == "__main__":
                 name="Unitree G1 Joint Data",
                 desc="The joint data for unitree G1",
                 rate=60,
-                topic="src:data",
+                topic=constants.SRC_DATA,
+                fields=JOINT_FIELDS,
             ),
             JointSource(),
         )
@@ -87,6 +81,6 @@ if __name__ == "__main__":
         .attach_battery(G1Battery())
         .auto_discover_cameras()
         .verbose()
-        .run(on_error)
+        .run()
     )
     runtime.wait_for_interrupt()

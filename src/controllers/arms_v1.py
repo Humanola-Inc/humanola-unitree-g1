@@ -11,7 +11,7 @@ from typing import List, Literal, Tuple
 import casadi
 import numpy as np
 import pinocchio as pin
-from humanola import controllers, robo
+from humanola import controllers
 from pinocchio import casadi as cpin
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher
 from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
@@ -637,8 +637,9 @@ class G1Arm:
         self.controller = ArmController()
         pass
 
-    def ctrl_beg(self):
+    def open(self):
         self.controller.beg()
+        return self
 
     def ctrl_reset(self, prev: controllers.Device, cur: controllers.Device):
         prev_left_res_btn = prev.get(self.left_xr_reset_query)
@@ -739,11 +740,5 @@ class G1Arm:
         if should_run:
             self.controller.move_arms_rel(left_rel_tf, right_rel_tf)
 
-    def ctrl_end(self):
+    def close(self):
         self.controller.end()
-
-    def open(self):
-        return self
-
-    def desc(self):
-        return robo.LoopDesc(name="G1 Arm", desc="G1 Arm controller", frame_rate=60)

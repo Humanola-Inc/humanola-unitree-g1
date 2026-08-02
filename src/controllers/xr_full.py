@@ -1,38 +1,18 @@
 import logging
 from dataclasses import dataclass
-from queue import Empty
-from typing import List, Tuple, Union
+from typing import List
 
 from humanola import controllers, robo
-from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 from .arms_v1 import G1Arm, G1ArmConfig
 from .loco import LocoConfig, LocoController, WalkMode
-
-
-class CtrlBeg:
-    pass
-
-
-class CtrlEnd:
-    pass
-
-
-class Ctrl:
-    prev: bytes
-    cur: bytes
-
-    def to_dev(self) -> Tuple[controllers.Device, controllers.Device]:
-        return controllers.Device.proto_decode(
-            self.prev
-        ), controllers.Device.proto_decode(self.cur)
 
 
 @dataclass
 class XrFullConfig:
     loco: LocoConfig
     arms: G1ArmConfig
-    others: List["robo.ControllerStream"]
+    others: List["robo.Controller"]
 
 
 class XrFull:
@@ -43,16 +23,17 @@ class XrFull:
         self.arms = G1Arm(self.config.arms)
         self.other_skip_ids = []
 
-    def ctrl_beg(self):
-        self.loco.ctrl_beg()
+    def open(self):
+        self.loco.open()
         for id, c in enumerate(self.config.others):
             try:
-                c.ctrl_beg()
+                c.open()
             except Exception as e:
                 self.other_skip_ids.append(id)
                 logging.warning(f"[WARN] cannot start: {e}")
-        self.arms.ctrl_beg()
+        self.arms.open()
         self.walk_mode = WalkMode.NORMAL
+        return self
 
     def ctrl(self, prev: controllers.Device, cur: controllers.Device):
         prev_mode_btn = prev.get(
@@ -73,10 +54,10 @@ class XrFull:
         ):
             if self.walk_mode == WalkMode.NORMAL:
                 self.walk_mode = WalkMode.AI
-                self.arms.ctrl_end()
+                self.arms.close()
             else:
                 self.walk_mode = WalkMode.NORMAL
-                self.arms.ctrl_beg()
+                self.arms.open()
         self.loco.ctrl(prev, cur)
         if self.walk_mode == WalkMode.NORMAL:
             self.arms.ctrl(prev, cur)
@@ -84,13 +65,10 @@ class XrFull:
             if id not in self.other_skip_ids:
                 c.ctrl(prev, cur)
 
-    def ctrl_end(self):
-        self.loco.ctrl_end()
+    def close(self):
+        self.loco.close()
         if self.walk_mode == WalkMode.NORMAL:
-            self.arms.ctrl_end()
+            self.arms.close()
         for id, c in enumerate(self.config.others):
             if id not in self.other_skip_ids:
-                c.ctrl_end()
-
-    def open(self):
-        return self
+                c.close()

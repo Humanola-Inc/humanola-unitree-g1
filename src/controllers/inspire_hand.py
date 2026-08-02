@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Literal
 
 import numpy as np
-from humanola import controllers, robo
+from humanola import controllers
 from inspire_demos import InspireHandModbus
 
 
@@ -175,25 +175,16 @@ class InspireHandController:
         self.config = config
         self.hand = InspireHandModbus(ip=self.config.ip, port=self.config.port)
 
-    def ctrl_beg(self):
+    def open(self):
         self.hand.connect()
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
+        return self
 
     def ctrl(self, prev: controllers.Device, cur: controllers.Device):
         hand_ctrl(self.config.hand, cur, self.hand)
 
-    def ctrl_end(self):
+    def close(self):
         self.hand.disconnect()
-
-    def desc(self) -> robo.LoopDesc:
-        return robo.LoopDesc(
-            name="Inspire Hands",
-            desc="Controller for Inspire Hands",
-            frame_rate=60,
-        )
-
-    def open(self):
-        return self
 
 
 def button_ctrl(
@@ -221,25 +212,16 @@ class InspireHandButtonController:
             for name in config.buttons
         ]
 
-    def ctrl_beg(self):
+    def open(self):
         self.hand.connect()
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
+        return self
 
     def ctrl(self, prev: controllers.Device, cur: controllers.Device):
         button_ctrl(cur, self.hand, self.qs)
 
-    def ctrl_end(self):
+    def close(self):
         self.hand.disconnect()
-
-    def desc(self) -> robo.LoopDesc:
-        return robo.LoopDesc(
-            name="Inspire Hands",
-            desc="Controller for Inspire Hands",
-            frame_rate=60,
-        )
-
-    def open(self):
-        return self
 
 
 class InspireHandGenericController:
@@ -251,9 +233,10 @@ class InspireHandGenericController:
             for name in config.buttons
         ]
 
-    def ctrl_beg(self):
+    def open(self):
         self.hand.connect()
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
+        return self
 
     def ctrl(self, prev: controllers.Device, cur: controllers.Device):
         if prev.kind == "xr-hand" and cur.kind == "xr-hand":
@@ -261,15 +244,5 @@ class InspireHandGenericController:
         else:
             button_ctrl(cur, self.hand, self.qs)
 
-    def ctrl_end(self):
+    def close(self):
         self.hand.disconnect()
-
-    def desc(self) -> robo.LoopDesc:
-        return robo.LoopDesc(
-            name="Inspire Hands",
-            desc="Controller for Inspire Hands",
-            frame_rate=60,
-        )
-
-    def open(self):
-        return self

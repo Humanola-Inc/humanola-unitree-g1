@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from humanola import controllers, robo
+from humanola import controllers
 from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
 
 
@@ -74,11 +74,12 @@ class LocoController:
             .name(self.config.mode_switch_btn)
         )
 
-    def ctrl_beg(self):
+    def open(self):
         self.loco = LocoClient()
         self.loco.Init()
         self.loco.SetFsmId(500)
         self.walk_mode = WalkMode.NORMAL
+        return self
 
     def to_move_command(self, cur: controllers.Device) -> MoveCommand:
         left_joy = cur.get(self.trans_query)
@@ -134,9 +135,6 @@ class LocoController:
         # if self.should_do_wave(prev, cur):
         #     self.loco.WaveHand()
 
-    def ctrl_end(self):
+    def close(self):
         assert self.loco is not None
         self.loco = None
-
-    def open(self):
-        return self
