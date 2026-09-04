@@ -1,5 +1,5 @@
 import numpy as np
-from humanola import controllers
+from humanola import robo as controllers
 
 
 def pose2transform(

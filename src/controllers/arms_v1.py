@@ -11,7 +11,7 @@ from typing import List, Literal, Tuple
 import casadi
 import numpy as np
 import pinocchio as pin
-from humanola import controllers
+from humanola import robo as controllers
 from pinocchio import casadi as cpin
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher
 from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
@@ -681,7 +681,7 @@ class G1Arm:
         ):
             self.controller.move_arms_to_hold("right")
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         self.ctrl_reset(prev, cur)
         self.ctrl_hold(prev, cur)
         prev_left_pos = prev.get(self.left_xr_pos_query)

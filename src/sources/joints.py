@@ -1,7 +1,7 @@
 import math
 from typing import Sequence
 
-from humanola import robo, transport
+from humanola import dataset, robo
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_, MotorState_
 
 from g1_native import G1Subscriber
@@ -41,7 +41,7 @@ JOINT_NAMES = (
 RAD_TO_DEG = 180 / math.pi
 
 JOINT_FIELDS = [
-    robo.Field.tensor(name, robo.TDType.Angle, RAD_TO_DEG, "rad", [1])
+    dataset.Field(name, dataset.DType.angle(RAD_TO_DEG, "rad", [1]))
     for name in JOINT_NAMES
 ]
 
@@ -51,15 +51,18 @@ class JointSource:
         self.sub = G1Subscriber("rt/lowstate", LowState_, auto_start=False)
         self.q = [0.0] * len(JOINT_NAMES)
 
-    def src(self) -> transport.RawPacket:
+    def get_data(self) -> robo.DataFrame:
         msg = self.sub.get_msg_nowait()
         if msg is not None:
             motor_states: Sequence[MotorState_] = msg.motor_state  # type: ignore
             self.q = [motor_states[i].q for i in range(len(JOINT_NAMES))]
-        row = robo.Row()
+        frame = robo.DataFrame()
         for q in self.q:
-            row.add([q])
-        return transport.RawPacket(row.proto_encode())
+            frame.attach([q])
+        return frame
+
+    def close_stream(self) -> None:
+        pass
 
     def open(self):
         self.sub.start()

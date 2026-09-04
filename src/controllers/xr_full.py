@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import List
 
-from humanola import controllers, robo
+from humanola import robo as controllers
 
 from .arms_v1 import G1Arm, G1ArmConfig
 from .loco import LocoConfig, LocoController, WalkMode
@@ -12,7 +12,7 @@ from .loco import LocoConfig, LocoController, WalkMode
 class XrFullConfig:
     loco: LocoConfig
     arms: G1ArmConfig
-    others: List["robo.Controller"]
+    others: List[object]
 
 
 class XrFull:
@@ -35,7 +35,7 @@ class XrFull:
         self.walk_mode = WalkMode.NORMAL
         return self
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         prev_mode_btn = prev.get(
             controllers.Query()
             .name(self.config.loco.mode_switch_btn)
@@ -58,12 +58,12 @@ class XrFull:
             else:
                 self.walk_mode = WalkMode.NORMAL
                 self.arms.open()
-        self.loco.ctrl(prev, cur)
+        self.loco.recv_delta(prev, cur)
         if self.walk_mode == WalkMode.NORMAL:
-            self.arms.ctrl(prev, cur)
+            self.arms.recv_delta(prev, cur)
         for id, c in enumerate(self.config.others):
             if id not in self.other_skip_ids:
-                c.ctrl(prev, cur)
+                c.recv_delta(prev, cur)
 
     def close(self):
         self.loco.close()

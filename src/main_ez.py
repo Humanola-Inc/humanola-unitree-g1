@@ -1,3 +1,5 @@
+import os
+
 from humanola import constants, robo
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
@@ -12,30 +14,27 @@ from controllers import (
     XrFull,
     XrFullConfig,
 )
+from main import ROBO_ID, attach_cameras
 from sources import JOINT_FIELDS, JointSource
 
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
-
-    unitree_g1 = (
-        robo.Robo.new_default()
-        .attach_source(
-            robo.LoopDesc(
-                name="Unitree G1 Joint Data",
-                desc="The joint data for unitree G1",
-                rate=60,
-                topic=constants.SRC_DATA,
-                fields=JOINT_FIELDS,
-            ),
-            JointSource(),
+    config = attach_cameras(
+        robo.RoboConfig(
+            os.environ["HUMANOLA_API_ENDPOINT"],
+            os.environ["HUMANOLA_API_KEY"],
+            os.environ.get("HUMANOLA_ROBO_ID", ROBO_ID),
         )
-        .attach_controller(
-            robo.LoopDesc(
-                name="Inspire Hands",
-                desc="Inspire hands control",
-                rate=60,
-                topic=constants.DEV_XR_HAND_TOPIC,
-            ),
+        .attach_data(
+            constants.SRC_DATA,
+            JointSource(),
+            60,
+            JOINT_FIELDS,
+            name="Unitree G1 Joint Data",
+            desc="The joint data for unitree G1",
+        )
+        .attach_device_subscriber(
+            constants.DEV_XR_HAND_TOPIC,
             InspireHandGenericController(
                 config=InspireHandGenericConfig(
                     ip="192.168.123.211",
@@ -43,14 +42,12 @@ if __name__ == "__main__":
                     hand="right",
                 )
             ),
+            60,
+            name="Inspire Hands",
+            desc="Inspire hands control",
         )
-        .attach_controller(
-            robo.LoopDesc(
-                name="XR Teloperation",
-                desc="Full XR Teleoperation, Hands and Foot",
-                rate=60,
-                topic=constants.DEV_XR_CONTROLLER_TOPIC,
-            ),
+        .attach_device_subscriber(
+            constants.DEV_XR_CONTROLLER_TOPIC,
             XrFull(
                 config=XrFullConfig(
                     loco=LocoConfig.xr_with_hands(),
@@ -66,18 +63,18 @@ if __name__ == "__main__":
                     ],
                 )
             ),
+            60,
+            name="XR Teloperation",
+            desc="Full XR Teleoperation, Hands and Foot",
         )
-        .attach_controller(
-            robo.LoopDesc(
-                name="PS4 Control",
-                desc="Control the G1 unit with a ps4 stick",
-                rate=60,
-                topic=constants.DEV_GAMEPAD_TOPIC,
-            ),
+        .attach_device_subscriber(
+            constants.DEV_GAMEPAD_TOPIC,
             LocoController(config=LocoConfig.dpad()),
+            60,
+            name="PS4 Control",
+            desc="Control the G1 unit with a ps4 stick",
         )
-        .auto_discover_cameras()
         .attach_battery(G1Battery())
     )
-    channel, runtime = unitree_g1.run()
+    channel, runtime = config.run()
     runtime.wait_for_interrupt()

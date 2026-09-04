@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Literal
 
 import numpy as np
-from humanola import controllers
+from humanola import robo as controllers
 from inspire_demos import InspireHandModbus
 
 
@@ -180,7 +180,7 @@ class InspireHandController:
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
         return self
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         hand_ctrl(self.config.hand, cur, self.hand)
 
     def close(self):
@@ -217,7 +217,7 @@ class InspireHandButtonController:
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
         return self
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         button_ctrl(cur, self.hand, self.qs)
 
     def close(self):
@@ -238,7 +238,7 @@ class InspireHandGenericController:
         self.hand.set_angle(np.array([0, 0, 0, 0, 0, 0], dtype=np.int32))
         return self
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         if prev.kind == "xr-hand" and cur.kind == "xr-hand":
             hand_ctrl(self.config.hand, cur, self.hand)
         else:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from humanola import controllers
+from humanola import robo as controllers
 from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
 
 
@@ -120,7 +120,7 @@ class LocoController:
             and not cur_trig_btn.as_btn().pressed
         )
 
-    def ctrl(self, prev: controllers.Device, cur: controllers.Device):
+    def recv_delta(self, prev: controllers.Device, cur: controllers.Device):
         assert self.loco is not None
         loco_cmd = self.to_move_command(cur)
         if not (loco_cmd.y == 0 and loco_cmd.x == 0 and loco_cmd.w == 0):
