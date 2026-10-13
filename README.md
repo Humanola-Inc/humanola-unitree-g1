@@ -1,50 +1,34 @@
-# A. Prerequisites
-First, install prerequisites: 
-```sh
+# Humanola Unitree G1
+## A. Prerequisites
+Install the prerequisites:
+```
 sudo apt install -y \
-  ffmpeg \ 
+  build-essential \
+  cmake \
+  git \
+  ffmpeg \
   libsm6 \
   libxext6 \
   libstdc++6 \
   ca-certificates
 ```
-Then, install `CYCLONEDDS`
-```sh
-cd /opt
-git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-cd /opt/cyclonedds
-cmake -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -Bbuild .
-/opt/cyclonedds/build
-cmake --build . --target install --config Release
+and a `conda` flavour that can download from `conda-forge` (`mamba`, `micromamba`, `miniforge`, ...).
+
+## B. Configuring
+Fill in your `API_KEY` and `ROBO_ID` in `src/main.py`.
+
+## C. Installing
+```
+./install-autostart.sh <env_name>
+```
+This builds CycloneDDS, installs `unitree_sdk2py`, `inspire_demos` and `humanola` into the conda env `<env_name>`, and installs a systemd service that starts on boot. Logs:
+```
+journalctl -u humanola-unitree-g1 -f
 ```
 
-# B. Python Dependencies
-In general, we recommend using `conda` / `mamba` or any flavours that supports downloading from `conda-forge` to install dependencies. 
+## D. Running Without The Robot
 ```
-conda create --name piper
-```
-then activate: 
-```
-conda activate piper
-```
-Finally, install dependencies: 
-- Install `unitreesdk2py`
-```sh
-cd /opt
-git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
-cd /opt/unitree_sdk2_python
-export CYCLONEDDS_HOME="/opt/cyclonedds"
-pip install --compile .
-cp -r unitree_sdk2py/utils/lib /usr/local/lib/python3.11/site-packages/unitree_sdk2py/utils
-rm /usr/local/lib/python3.11/site-packages/unitree_sdk2py/__init__.py
-```
-replace `python3.11` above with your python version.
-```sh
-pip install -r requirements.txt
-conda install pinocchio -y
-```
-## C. Running the Script
-Finally, run the humanola script after getting your `ROBO_ID` and `API_KEY`.
-```
-python3 main.py
+conda activate <env_name>
+cd src
+python3 main.py --sim
 ```
