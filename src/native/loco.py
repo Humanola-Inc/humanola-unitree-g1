@@ -48,14 +48,19 @@ class LocoSim:
 class LocoNotSim:
     def __init__(self):
         # imported here so --sim runs without the unitree sdk installed
+        from unitree_sdk2py.g1.loco.g1_loco_api import InternalFsmMode
         from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
 
         self.loco = LocoClient()
+        self.walk_run = InternalFsmMode.WALKRUN
 
     def start(self):
         self.loco.Init()
 
     def set_walk_mode(self, mode: WalkMode):
+        # 801 only takes once the loco service is in its walk run controller
+        if mode == WalkMode.AI:
+            self.loco.SwitchToInternalCtrl(self.walk_run)
         self.loco.SetFsmId(mode.value)
 
     def move(self, x: float, y: float, w: float):
