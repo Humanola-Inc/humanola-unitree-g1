@@ -1,5 +1,4 @@
 import argparse
-import logging
 import pathlib
 
 import numpy as np
@@ -15,7 +14,7 @@ from native import (
     LocoConfig,
     WalkMode,
     Xr2Arm,
-    Xr2Hand,
+    Xr2Hands,
     Xr2Loco,
     XrConfig,
 )
@@ -23,22 +22,16 @@ from native.body import Body
 
 
 class XrCtrl:
-    def __init__(self, arm: Xr2Arm, loco: Xr2Loco, hand: Xr2Hand):
+    def __init__(self, arm: Xr2Arm, loco: Xr2Loco, hands: Xr2Hands):
         self.arm = arm
         self.loco = loco
-        self.hand = hand
-        self.has_hand = False
+        self.hands = hands
 
     def open(self):
         self.loco.open()
         self.arm.open()
-        # the robot is still usable without its hand
-        try:
-            self.hand.open()
-            self.has_hand = True
-        except Exception as e:
-            logging.warning(f"cannot connect to hand: {e}")
-            self.has_hand = False
+        # the robot is still usable without its hands
+        self.hands.open()
         return self
 
     def recv_delta(self, prev: robo.Device, cur: robo.Device):
@@ -52,14 +45,12 @@ class XrCtrl:
                 self.arm.open()
         if self.loco.walk_mode == WalkMode.NORMAL:
             self.arm.recv_delta(prev, cur)
-        if self.has_hand:
-            self.hand.recv_delta(prev, cur)
+        self.hands.recv_delta(prev, cur)
 
     def close_stream(self):
         self.loco.close_stream()
         self.arm.close_stream()
-        if self.has_hand:
-            self.hand.close_stream()
+        self.hands.close_stream()
 
 
 class JointData:
@@ -126,15 +117,15 @@ if __name__ == "__main__":
             v=XrCtrl(
                 arm=Xr2Arm(arm, XrConfig.left(), XrConfig.right(), scale=1.0),
                 loco=Xr2Loco(LocoConfig.xr(), sim=args.sim),
-                hand=Xr2Hand(HandConfig.right(), sim=args.sim),
+                hands=Xr2Hands([HandConfig.left(), HandConfig.right()], sim=args.sim),
             ),
         )
         .attach_device_subscriber(
             topic=constants.DEV_XR_HAND_TOPIC,
             name="Inspire Hands",
-            desc="Controls the inspire hand with hand tracking",
+            desc="Controls the inspire hands with hand tracking",
             rate=60,
-            v=Xr2Hand(HandConfig.right(), sim=args.sim),
+            v=Xr2Hands([HandConfig.left(), HandConfig.right()], sim=args.sim),
         )
         .attach_device_subscriber(
             topic=constants.DEV_GAMEPAD_TOPIC,

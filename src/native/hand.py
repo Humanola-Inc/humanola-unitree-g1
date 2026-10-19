@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import List, Literal, Protocol
@@ -98,6 +99,17 @@ class HandConfig:
     port: int = 6000
 
     @staticmethod
+    def left() -> HandConfig:
+        return HandConfig(
+            hand="left",
+            ip="192.168.123.210",
+            buttons=[
+                robo.Query(kind=robo.SensorKind.Btn, name="xr.left.aim"),
+                robo.Query(kind=robo.SensorKind.Btn, name="dpad.l2"),
+            ],
+        )
+
+    @staticmethod
     def right() -> HandConfig:
         return HandConfig(
             hand="right",
@@ -165,3 +177,29 @@ class Xr2Hand:
             self.recv_tracking(cur)
         else:
             self.recv_buttons(cur)
+
+
+class Xr2Hands:
+    def __init__(self, configs: List[HandConfig], sim: bool = False):
+        self.hands = [Xr2Hand(config, sim=sim) for config in configs]
+        self.connected: List[Xr2Hand] = []
+
+    def open(self):
+        self.connected = []
+        # each hand connects on its own so a missing hand does not take the
+        # other one down with it
+        for hand in self.hands:
+            try:
+                self.connected.append(hand.open())
+            except Exception as e:
+                logging.warning(f"cannot connect to {hand.config.hand} hand: {e}")
+        return self
+
+    def close_stream(self):
+        for hand in self.connected:
+            hand.close_stream()
+        self.connected = []
+
+    def recv_delta(self, prev: robo.Device, cur: robo.Device):
+        for hand in self.connected:
+            hand.recv_delta(prev, cur)

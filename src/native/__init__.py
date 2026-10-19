@@ -1,6 +1,6 @@
 from .body import JOINT_NAMES, G1BodyNotSim, G1BodySim
 from .controller import ArmController
-from .hand import HandConfig, Xr2Hand
+from .hand import HandConfig, Xr2Hand, Xr2Hands
 from .loco import LocoConfig, WalkMode, Xr2Loco
 from .solver import ArmSolver
 from .state import ArmState
@@ -13,6 +13,7 @@ __all__ = [
     "ArmController",
     "HandConfig",
     "Xr2Hand",
+    "Xr2Hands",
     "LocoConfig",
     "WalkMode",
     "Xr2Loco",
