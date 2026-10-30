@@ -49,6 +49,9 @@ fi
 echo "installing pinocchio and casadi"
 "$CONDA" install -y -n "$ENV_NAME" -c conda-forge pinocchio casadi
 
+echo "installing mujoco and mink"
+"$CONDA" run -n "$ENV_NAME" pip install mujoco mink "qpsolvers[quadprog]"
+
 # CycloneDDS, unitree_sdk2py needs it to build its python bindings
 echo "building cyclonedds"
 cmake -S "$REPO_DIR/libs/cyclonedds" -B "$REPO_DIR/build/cyclonedds" \

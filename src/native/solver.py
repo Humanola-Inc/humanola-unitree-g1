@@ -1,7 +1,9 @@
 import pathlib
-from typing import List, Tuple
+from typing import List, Protocol, Tuple
 
 import casadi
+import mink
+import mujoco
 import numpy as np
 import numpy.typing as npt
 import pinocchio as pin
@@ -68,7 +70,20 @@ class WeightedMovingFilter:
         return self.filtered
 
 
-class ArmSolver:
+class ArmSolver(Protocol):
+    def forward(
+        self, joints: npt.NDArray[np.float64]
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
+
+    def backward(
+        self,
+        left_pose: npt.NDArray[np.float64],
+        right_pose: npt.NDArray[np.float64],
+        prev_joints: npt.NDArray[np.float64] | None = None,
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...
+
+
+class CasadiSolver:
     def __init__(self, urdf_file: pathlib.Path, compile: bool = True):
         self.model = pin.RobotWrapper.BuildFromURDF(
             str(urdf_file), package_dirs=str(urdf_file.parent)
@@ -206,3 +221,94 @@ class ArmSolver:
             self.model.model, self.data, joints, np.zeros(14), np.zeros(14)
         )
         return joints, np.array(tauff)
+
+
+class MujocoSolver:
+    def __init__(self, urdf_file: pathlib.Path, max_iters: int = 20):
+        spec = mujoco.MjSpec.from_file(str(urdf_file))
+        for name in LOCKED_JOINTS:
+            spec.delete(spec.joint(name))
+        # only kinematics and inertia are needed, skip loading the meshes
+        for geom in [g for g in spec.geoms if g.type == mujoco.mjtGeom.mjGEOM_MESH]:
+            spec.delete(geom)
+        for mesh in list(spec.meshes):
+            spec.delete(mesh)
+        # End Effector Frames, we will protrude them a little from the
+        # wrists (for hands)
+        spec.joint("left_wrist_yaw_joint").parent.add_site(
+            name="left_ee", pos=[0.05, 0, 0]
+        )
+        spec.joint("right_wrist_yaw_joint").parent.add_site(
+            name="right_ee", pos=[0.05, 0, 0]
+        )
+        self.model = spec.compile()
+        self.data = mujoco.MjData(self.model)
+        self.configuration = mink.Configuration(self.model)
+        self.limits = [mink.ConfigurationLimit(self.model)]
+        self.max_iters = max_iters
+
+        # position matters more than orientation, with a light pull towards
+        # zero to keep away from odd configurations
+        self.left_ef_task = mink.FrameTask(
+            frame_name="left_ee",
+            frame_type="site",
+            position_cost=1.0,
+            orientation_cost=0.16,
+            lm_damping=1.0,
+        )
+        self.right_ef_task = mink.FrameTask(
+            frame_name="right_ee",
+            frame_type="site",
+            position_cost=1.0,
+            orientation_cost=0.16,
+            lm_damping=1.0,
+        )
+        self.posture_task = mink.PostureTask(self.model, cost=0.003)
+        self.posture_task.set_target(np.zeros(self.model.nq))
+        self.smooth_filter = WeightedMovingFilter([0.4, 0.3, 0.2, 0.1], 14)
+
+    def forward(
+        self, joints: npt.NDArray[np.float64]
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        self.configuration.update(joints)
+        return (
+            self.configuration.get_transform_frame_to_world(
+                "left_ee", "site"
+            ).as_matrix(),
+            self.configuration.get_transform_frame_to_world(
+                "right_ee", "site"
+            ).as_matrix(),
+        )
+
+    def backward(
+        self,
+        left_pose: npt.NDArray[np.float64],
+        right_pose: npt.NDArray[np.float64],
+        prev_joints: npt.NDArray[np.float64] | None = None,
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        if prev_joints is None:
+            prev_joints = np.zeros(14)
+        self.configuration.update(prev_joints)
+        self.left_ef_task.set_target(mink.SE3.from_matrix(left_pose))
+        self.right_ef_task.set_target(mink.SE3.from_matrix(right_pose))
+        tasks = [self.left_ef_task, self.right_ef_task, self.posture_task]
+        for _ in range(self.max_iters):
+            # dt = 1 so each step is a full joint displacement
+            vel = mink.solve_ik(
+                self.configuration,
+                tasks,
+                1.0,
+                "quadprog",
+                damping=1e-3,
+                limits=self.limits,
+            )
+            self.configuration.integrate_inplace(vel, 1.0)
+            if np.linalg.norm(vel) < 1e-4:
+                break
+        joints = self.smooth_filter.add(self.configuration.q.copy())
+        # feed forward torque to hold the arms against gravity, qfrc_bias is
+        # just gravity when the arms are not moving
+        self.data.qpos[:] = joints
+        self.data.qvel[:] = 0
+        mujoco.mj_forward(self.model, self.data)
+        return joints, self.data.qfrc_bias.copy()

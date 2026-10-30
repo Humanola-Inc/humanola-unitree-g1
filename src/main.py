@@ -6,12 +6,12 @@ from humanola import constants, dataset, robo
 from native import (
     JOINT_NAMES,
     ArmController,
-    ArmSolver,
     ArmState,
     G1BodyNotSim,
     G1BodySim,
     HandConfig,
     LocoConfig,
+    MujocoSolver,
     WalkMode,
     Xr2Arm,
     Xr2Hands,
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     arm = ArmController(
         state=ArmState(
             joints=np.zeros(14),
-            solver=ArmSolver(urdf_path),
+            solver=MujocoSolver(urdf_path),
         ),
         sim=args.sim,
     )
@@ -108,6 +108,7 @@ if __name__ == "__main__":
             api_url="https://grpc.humanola.com",
             api_key="<YOUR_API_KEY>",
             robo_id="<YOUR_ROBO_ID>",
+            name="Unitree G1",
         )
         .attach_device_subscriber(
             topic=constants.DEV_XR_CONTROLLER_TOPIC,
